@@ -39,6 +39,20 @@ public class PinyinUtil {
         return result;
     }
 
+    public static String getPinYinHeadChar(String str) {
+        StringBuilder convert = new StringBuilder();
+        for (int j = 0; j < str.length(); j++) {
+            char word = str.charAt(j);
+            String[] pinyinArray = PinyinHelper.toHanyuPinyinStringArray(word);
+            if (pinyinArray != null) {
+                convert.append(pinyinArray[0].charAt(0));
+            } else {
+                convert.append(word);
+            }
+        }
+        return convert.toString();
+    }
+
     public static String toPinYin(String str, String split) {
         String result = null;
         try {
