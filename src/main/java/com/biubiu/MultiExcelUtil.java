@@ -22,6 +22,8 @@ public class MultiExcelUtil {
 
     private static final String PATTERN = "yyyyMMddHHmmss";
 
+    private static final String EXCEL_PATTERN = "yyyy-MM-dd HH:mm:ss";
+
     private static final String START_NUM = "startNum";
 
     private static final String END_NUM = "endNum";
@@ -39,14 +41,17 @@ public class MultiExcelUtil {
     /**
      * 导出excel
      *
-     * @param params           查询参数
-     * @param orderBaseService 查询service
-     * @param allRowNumbers    全部记录
-     * @param clazz            返回实体
-     * @param response         响应
+     * @param excelDownLoadParams 下载参数
      * @throws Exception 异常
      */
-    public static void excelDownLoad(Map<String, Object> params, OrderBaseService orderBaseService, int allRowNumbers, Class clazz, HttpServletResponse response) throws Exception {
+    public static void excelDownLoad(ExcelDownLoadParams excelDownLoadParams) throws Exception {
+        Map<String, Object> params = excelDownLoadParams.getParams();
+        int allRowNumbers = excelDownLoadParams.getAllRowNumbers();
+        Class clazz = excelDownLoadParams.getClazz();
+        String[] assetHeadTemp = excelDownLoadParams.getAssetHeadTemp();
+        String[] assetNameTemp = excelDownLoadParams.getAssetNameTemp();
+        HttpServletResponse response = excelDownLoadParams.getResponse();
+
         //设置相应头
         setHeader(response);
 
@@ -78,7 +83,7 @@ public class MultiExcelUtil {
                     params.put(START_NUM, i * MAX_ROW_COUNT);
                     params.put(END_NUM, MAX_ROW_COUNT);
                 }
-                List result = orderBaseService.queryOrderByMap(params);
+                List result = excelDownLoadParams.getOrderBaseService().queryOrderByMap(params);
                 List<Map> listMap = CustomBeanUtil.listBean2listMap(result, clazz);
 
                 String tempExcelFile = filePath + fileName + "[" + (i + 1) + "]" + XLSX;
@@ -89,16 +94,15 @@ public class MultiExcelUtil {
                 fileNames.add(tempExcelFile);
                 FileOutputStream fos = new FileOutputStream(tempExcelFile);
                 SXSSFWorkbook wb = new SXSSFWorkbook(ROW_MEMORY);
-                doCreateWb(wb, listMap, fos);
+                doCreateWb(wb, listMap, fos, assetHeadTemp, assetNameTemp);
             }
 
             //导出zip压缩文件
             exportZip(response, fileNames, zip);
         } else {
-            SXSSFWorkbook wb = new SXSSFWorkbook(ROW_MEMORY);
             params.put(START_NUM, 0);
             params.put(END_NUM, MAX_ROW_COUNT);
-            List result = orderBaseService.queryOrderByMap(params);
+            List result = excelDownLoadParams.getOrderBaseService().queryOrderByMap(params);
             List<Map> listMap = CustomBeanUtil.listBean2listMap(result, clazz);
 
             String tempExcelFile = filePath + fileName + XLSX;
@@ -108,7 +112,8 @@ public class MultiExcelUtil {
             }
             fileNames.add(tempExcelFile);
             FileOutputStream fos = new FileOutputStream(tempExcelFile);
-            doCreateWb(wb, listMap, fos);
+            SXSSFWorkbook wb = new SXSSFWorkbook(ROW_MEMORY);
+            doCreateWb(wb, listMap, fos, assetHeadTemp, assetNameTemp);
             exportZip(response, fileNames, zip);
         }
     }
@@ -117,9 +122,9 @@ public class MultiExcelUtil {
         return System.getProperties().getProperty("os.name").toUpperCase().contains("WINDOWS");
     }
 
-    private static void doCreateWb(SXSSFWorkbook wb, List<Map> listMap, FileOutputStream fos) throws Exception {
+    private static void doCreateWb(SXSSFWorkbook wb, List<Map> listMap, FileOutputStream fos, String[] assetHeadTemp, String[] assetNameTemp) throws Exception {
         try {
-            wb = exportDataToExcelXLSX(wb, listMap);
+            wb = exportDataToExcelXLSX(wb, listMap, assetHeadTemp, assetNameTemp);
             wb.write(fos);
             fos.flush();
         } catch (RuntimeException e) {
@@ -131,9 +136,8 @@ public class MultiExcelUtil {
         }
     }
 
-    private static SXSSFWorkbook exportDataToExcelXLSX(SXSSFWorkbook wb, List<Map> listMap) {
-        String[] assetHeadTemp = OrderExportEnum.getOrderHeads();
-        String[] assetNameTemp = OrderExportEnum.getOrderFields();
+    private static SXSSFWorkbook exportDataToExcelXLSX(SXSSFWorkbook wb, List<Map> listMap, String[] assetHeadTemp, String[] assetNameTemp) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(EXCEL_PATTERN);
         CellStyle columnHeadStyle = wb.createCellStyle();
         columnHeadStyle.setWrapText(true);
         Font f = wb.createFont();// 字体
@@ -151,12 +155,18 @@ public class MultiExcelUtil {
         }
         if (listMap != null && listMap.size() > 0) {
             int rowIndex = 1;
+            Object value;
             for (Map map : listMap) {
                 row = sheet.createRow(rowIndex++);
                 int index = 0;
                 for (String anAssetNameTemp : assetNameTemp) {
                     cell = row.createCell(index++);
-                    cell.setCellValue(map.get(anAssetNameTemp) != null ? map.get(anAssetNameTemp).toString() : "");
+                    value = map.get(anAssetNameTemp);
+                    if (value instanceof Date) {
+                        cell.setCellValue(dateFormat.format(value));
+                    } else {
+                        cell.setCellValue(value != null ? value.toString() : "");
+                    }
                 }
             }
         }
@@ -217,6 +227,5 @@ public class MultiExcelUtil {
             zip.delete();
         }
     }
-
 
 }
