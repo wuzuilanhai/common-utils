@@ -15,6 +15,15 @@ public class CategoryUtil {
     @Autowired
     private CategoryMapper categoryMapper;
 
+    @Autowired
+    private AttrMapper attrMapper;
+
+    @Autowired
+    private ProductMapper productMapper;
+
+    @Autowired
+    private ImagesMapper imagesMapper;
+
     @Override
     public void addCategory(CategoryAddDto categoryAddDto) {
         String name = categoryAddDto.getName();
@@ -37,7 +46,7 @@ public class CategoryUtil {
         String id = categoryUpdateDto.getId();
         getCategoryById(id);
         String name = categoryUpdateDto.getName();
-        if (!StringUtils.isEmpty(name) && duplicateName(categoryUpdateDto.getName(), id)) {
+        if (!StringUtils.isEmpty(name) && duplicateName(name, id)) {
             throw new TradeException(CategoryOperationEnum.DUPLICATED_NAME.getMessage());
         }
         Category update = new Category();
@@ -54,24 +63,28 @@ public class CategoryUtil {
         LinkedList<CategoryRelationDto> relations = getCategoryRelation();
         //查出所有子类别并删除
         List<Category> children = getCategoryChildrenById(relations, id);
+        Date date = DateUtil.now();
         if (!children.isEmpty()) {
             for (Category c : children) {
-                doDeleteCategory(c, editor);
+                doDeleteCategory(c, editor, date);
             }
         }
         //删除父类别
-        int result = doDeleteCategory(category, editor);
+        int result = doDeleteCategory(category, editor, date);
         if (result == 0) {
             throw new TradeException(CategoryOperationEnum.DELETE_FAIL.getMessage());
         }
+        //删除关联的通用属性
+        deleteAttr(id, editor, date);
     }
 
     @Override
-    public Pager<Category> categories(CategoryListDto categoryListDto) {
-        Pager<Category> result = new Pager<>();
+    public Pager<CategoryDto> categories(CategoryListDto categoryListDto) {
         PageInfo<Category> categories = PageHelper.startPage(categoryListDto.getPage(), categoryListDto.getSize())
                 .doSelectPageInfo(() -> categoryMapper.categories(categoryListDto));
-        result.setContent(categories.getList());
+        List<CategoryDto> categoryDtoList = ObjectConverterUtil.convertList(categories.getList(), CategoryDto.class);
+        Pager<CategoryDto> result = new Pager<>();
+        result.setContent(categoryDtoList);
         result.setPage(categories.getPageNum());
         result.setSize(categories.getPageSize());
         result.setTotalPages(categories.getPages());
@@ -124,6 +137,47 @@ public class CategoryUtil {
         if (result == 0) {
             throw new TradeException(CategoryOperationEnum.MOVE_FAIL.getMessage());
         }
+    }
+
+    @Override
+    public List<CategoryAndProductDto> categoryAndProduct() {
+        LinkedList<CategoryRelationDto> relations = getCategoryRelation();
+        return initCategoryAndProduct(relations);
+    }
+
+    private List<CategoryAndProductDto> initCategoryAndProduct(LinkedList<CategoryRelationDto> relations) {
+        List<CategoryAndProductDto> result = new ArrayList<>();
+        relations.forEach(relation -> {
+            String categoryId = relation.getId();
+            CategoryAndProductDto categoryAndProductDto = new CategoryAndProductDto();
+            categoryAndProductDto.setCategoryId(categoryId);
+            categoryAndProductDto.setCategoryName(relation.getName());
+            List<Product> products = getProductByCategoryId(categoryId);
+            List<ProductNameDto> productNameDtoList = ObjectConverterUtil.convertList(products, ProductNameDto.class);
+
+            productNameDtoList.forEach(product -> {
+                Weekend<Images> imagesWeekend = Weekend.of(Images.class);
+                imagesWeekend.weekendCriteria().andEqualTo(Images::getProductId, product.getId())
+                        .andEqualTo(Images::getIsDelete, EntityStatusEnum.EXIST.getStatus());
+                List<Images> images = imagesMapper.selectByExample(imagesWeekend);
+                if (images != null && !images.isEmpty()) {
+                    Images image = images.get(0);
+                    product.setImageUrl(image.getUrl());
+                }
+            });
+
+            categoryAndProductDto.setProductNameDtoList(productNameDtoList);
+            categoryAndProductDto.setCategoryAndProductDtoList(initCategoryAndProduct(relation.getChildCategory()));
+            result.add(categoryAndProductDto);
+        });
+        return result;
+    }
+
+    private List<Product> getProductByCategoryId(String categoryId) {
+        Weekend<Product> productWeekend = Weekend.of(Product.class);
+        productWeekend.weekendCriteria().andEqualTo(Product::getCategoryId, categoryId)
+                .andEqualTo(Product::getIsDelete, EntityStatusEnum.EXIST.getStatus());
+        return productMapper.selectByExample(productWeekend);
     }
 
     private void doMove(String id, Category category) {
@@ -217,14 +271,25 @@ public class CategoryUtil {
         return categoryList;
     }
 
-    private int doDeleteCategory(Category c, String editor) {
+    private int doDeleteCategory(Category c, String editor, Date editTime) {
         if (c.getAssociatedNumber() > 0) {
             throw new TradeException(CategoryOperationEnum.ASSOCIATED_NUMBER_NOT_ZERO.getMessage());
         }
         c.setIsDelete(EntityStatusEnum.DELETE.getStatus());
         c.setEditor(editor);
-        c.setEditTime(DateUtil.now());
+        c.setEditTime(editTime);
         return categoryMapper.updateByPrimaryKeySelective(c);
+    }
+
+    private void deleteAttr(String id, String editor, Date editTime) {
+        Weekend<Attr> attrWeekend = Weekend.of(Attr.class);
+        attrWeekend.weekendCriteria().andEqualTo(Attr::getCategoryId, id)
+                .andEqualTo(Attr::getIsDelete, EntityStatusEnum.EXIST.getStatus());
+        Attr attr = new Attr();
+        attr.setIsDelete(EntityStatusEnum.DELETE.getStatus());
+        attr.setEditor(editor);
+        attr.setEditTime(editTime);
+        attrMapper.updateByExampleSelective(attr, attrWeekend);
     }
 
 }
