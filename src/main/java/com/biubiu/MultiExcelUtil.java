@@ -1,4 +1,8 @@
-package com.biubiu;
+package com.hfocean.clinic.web.util;
+
+import com.hfocean.clinic.common.util.CustomBeanUtil;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
@@ -14,7 +18,7 @@ import java.util.zip.ZipOutputStream;
 /**
  * Created by Haibiao.Zhang on 2018/8/13.
  */
-public class MultiExcelUtil {
+public class ExcelUtil {
 
     private static final String WINDOW_PATH = "E:/tmp/";
 
@@ -69,7 +73,7 @@ public class MultiExcelUtil {
         }
         String fileEnd = sdf.format(new Date());
         String fileName = FILE_NAME + fileEnd;
-        File zip = new File(filePath + fileName + ".zip");//压缩文件路径
+        File zip = new File(filePath + fileName + ZIP);//压缩文件路径
 
         if (allRowNumbers > MAX_ROW_COUNT) {
             //分批次生成excel
@@ -83,7 +87,7 @@ public class MultiExcelUtil {
                     params.put(START_NUM, i * MAX_ROW_COUNT);
                     params.put(END_NUM, MAX_ROW_COUNT);
                 }
-                List result = excelDownLoadParams.getOrderBaseService().queryOrderByMap(params);
+                List result = excelDownLoadParams.getExportService().queryResultByMap(params);
                 List<Map> listMap = CustomBeanUtil.listBean2listMap(result, clazz);
 
                 String tempExcelFile = filePath + fileName + "[" + (i + 1) + "]" + XLSX;
@@ -102,7 +106,7 @@ public class MultiExcelUtil {
         } else {
             params.put(START_NUM, 0);
             params.put(END_NUM, MAX_ROW_COUNT);
-            List result = excelDownLoadParams.getOrderBaseService().queryOrderByMap(params);
+            List result = excelDownLoadParams.getExportService().queryResultByMap(params);
             List<Map> listMap = CustomBeanUtil.listBean2listMap(result, clazz);
 
             String tempExcelFile = filePath + fileName + XLSX;
@@ -227,5 +231,6 @@ public class MultiExcelUtil {
             zip.delete();
         }
     }
+
 
 }

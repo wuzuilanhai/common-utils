@@ -1,4 +1,6 @@
-package com.biubiu;
+package com.hfocean.clinic.web.util;
+
+import com.hfocean.clinic.order.service.ExportService;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
@@ -16,7 +18,7 @@ public class ExcelDownLoadParams {
     /**
      * 查询service
      */
-    private OrderBaseService orderBaseService;
+    private ExportService exportService;
 
     /**
      * 全部记录个数
@@ -52,12 +54,12 @@ public class ExcelDownLoadParams {
         return this;
     }
 
-    public OrderBaseService getOrderBaseService() {
-        return orderBaseService;
+    public ExportService getExportService() {
+        return exportService;
     }
 
-    public ExcelDownLoadParams setOrderBaseService(OrderBaseService orderBaseService) {
-        this.orderBaseService = orderBaseService;
+    public ExcelDownLoadParams setExportService(ExportService exportService) {
+        this.exportService = exportService;
         return this;
     }
 
