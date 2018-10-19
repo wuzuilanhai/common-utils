@@ -26,7 +26,7 @@ public class InventoryTendencyExportUtil {
     public void export(HttpServletResponse response, String json) {
         JSONObject jo = JSON.parseObject(json);
 
-        String title = "库存变动趋势分析表";
+        String title = "xxx";
         RptExcelDomain rptDo = new RptExcelDomain();
         rptDo.setSheetName(title);
         rptDo.setSheetTitle(title);
@@ -64,7 +64,7 @@ public class InventoryTendencyExportUtil {
         // 设置response参数，可以打开下载页面
         response.reset();
         response.setContentType("application/vnd.ms-excel;charset=utf-8");
-        response.setHeader("Content-Disposition", "attachment;filename=" + new String(("库存变动趋势分析表.xls").getBytes(), "iso-8859-1"));
+        response.setHeader("Content-Disposition", "attachment;filename=" + new String(("xxx.xls").getBytes(), "iso-8859-1"));
         ServletOutputStream out = response.getOutputStream();
         try (BufferedInputStream bis = new BufferedInputStream(is); BufferedOutputStream bos = new BufferedOutputStream(out)) {
             byte[] buff = new byte[2048];
