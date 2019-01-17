@@ -41,15 +41,7 @@ public class ObjectConverterUtil {
      */
     public static <T> List<T> convertList(List<?> sourceList, Class<T> target) {
         List<T> result = new ArrayList<>();
-        sourceList.forEach(source -> {
-            try {
-                T object = target.newInstance();
-                BeanUtils.copyProperties(source, object);
-                result.add(object);
-            } catch (Exception e) {
-                LOGGER.error(e.getMessage());
-            }
-        });
+        sourceList.forEach(source -> convert(source, target));
         return result;
     }
 
