@@ -2,6 +2,7 @@ package com.biubiu;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -14,6 +15,7 @@ import javax.servlet.http.HttpSession;
 /**
  * Created by Haibiao.Zhang on 2018/8/27.
  */
+@Component
 public class ApplicationContextHelper implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;
